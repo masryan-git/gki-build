@@ -11,10 +11,6 @@ on:
         description: "masryan-kernel-v1"
         default: "masryan-kernel-v1"
         required: true
-      bbr_wireguard:
-        description: "Aktifkan BBR + WireGuard (eksperimental)"
-        type: boolean
-        default: false
 
 jobs:
   build:
@@ -27,6 +23,7 @@ jobs:
             /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           sudo docker image prune --all --force
           df -h /
+
       - name: Tambah swap
         run: |
           sudo swapoff -a
@@ -35,6 +32,7 @@ jobs:
           sudo mkswap /mnt/swapfile
           sudo swapon /mnt/swapfile
           free -h
+
       - name: Pasang dependensi
         run: |
           sudo apt-get update
@@ -56,36 +54,56 @@ jobs:
             -b "${{ inputs.branch }}"
           repo sync -c --no-tags --no-clone-bundle -j4
 
-      - name: Ubah config (opsional)
-        if: ${{ inputs.bbr_wireguard }}
+      - name: Atur nama kernel, BBR, dan WireGuard
         run: |
           cd ~/gki
-          # build.config.gki memanggil check_defconfig yang gagal jika defconfig diubah
+          # check_defconfig membuat build gagal jika defconfig diubah
           sed -i 's/check_defconfig//' common/build.config.gki
+          # nama versi kernel
+          sed -i '/^CONFIG_LOCALVERSION=/d' common/arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_LOCALVERSION="-${{ inputs.kernel_name }}"' >> common/arch/arm64/configs/gki_defconfig
+          # BBR sebagai default dan WireGuard. Algoritma TCP lain dimatikan
           cat >> common/arch/arm64/configs/gki_defconfig <<'EOF'
           CONFIG_TCP_CONG_ADVANCED=y
           CONFIG_TCP_CONG_BBR=y
+          CONFIG_DEFAULT_BBR=y
           CONFIG_DEFAULT_TCP_CONG="bbr"
+          CONFIG_NET_SCH_FQ=y
           CONFIG_WIREGUARD=y
+          # CONFIG_TCP_CONG_BIC is not set
+          # CONFIG_TCP_CONG_WESTWOOD is not set
+          # CONFIG_TCP_CONG_HTCP is not set
           EOF
-      - name: masryan-kernel-unjukbakat
-        run: |
-          cd ~/gki
-          sed -i 's/check_defconfig//' common/build.config.gki
-          sed -i '/^CONFIG_LOCALVERSION=/d' common/arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_LOCALVERSION="-${{ inputs.kernel_name }}"' >> common/arch/arm64/configs/gki_defconfig
+
       - name: Build kernel
         run: |
           set -o pipefail
           cd ~/gki
-          BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh 2>&1 | tail -n 200
+          export BUILD_CONFIG=common/build.config.gki.aarch64
+          if ! build/build.sh 2>&1 | tee ~/build.log | tail -n 100; then
+            if grep -q "modules list out of date" ~/build.log; then
+              echo "Daftar modul GKI berubah. Memperbarui daftar lalu build ulang."
+              MO=$(find out -path '*/common/modules.order' | head -n1)
+              cp "$MO" common/android/gki_aarch64_modules
+              build/build.sh 2>&1 | tail -n 200
+            else
+              exit 1
+            fi
+          fi
           find out -name Image -type f
+
+      - name: Cek config
+        run: |
+          CFG=$(find ~/gki/out -name .config -path '*common*' | head -n1)
+          echo "Config: $CFG"
+          grep -E 'CONFIG_TCP_CONG_BBR|CONFIG_DEFAULT_BBR|CONFIG_DEFAULT_TCP_CONG|CONFIG_NET_SCH_FQ=|CONFIG_WIREGUARD=|CONFIG_LOCALVERSION=' "$CFG" || true
 
       - name: Buat zip AnyKernel3
         run: |
           cd ~
           git clone --depth=1 https://github.com/osm0sis/AnyKernel3
           IMG=$(find ~/gki/out -path '*dist*' -name Image -type f | head -n1)
+          [ -n "$IMG" ] || { echo "Image tidak ditemukan di folder dist"; exit 1; }
           cp "$IMG" AnyKernel3/Image
           cd AnyKernel3
           rm -rf .git .github
