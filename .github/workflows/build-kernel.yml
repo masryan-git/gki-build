@@ -8,8 +8,8 @@ on:
         default: "common-android12-5.10-lts"
         required: true
       kernel_name:
-        description: "masryan-unjukbakat"
-        default: "masryan-unjukbakat"
+        description: "masryan-kernel-v1"
+        default: "masryan-kernel-v1"
         required: true
       bbr_wireguard:
         description: "Aktifkan BBR + WireGuard (eksperimental)"
