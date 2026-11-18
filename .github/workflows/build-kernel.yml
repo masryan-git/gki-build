@@ -54,14 +54,11 @@ jobs:
             -b "${{ inputs.branch }}"
           repo sync -c --no-tags --no-clone-bundle -j4
 
-      - name: Atur nama kernel, BBR, dan WireGuard
+      - name: Atur  BBR, dan WireGuard
         run: |
           cd ~/gki
           # check_defconfig membuat build gagal jika defconfig diubah
           sed -i 's/check_defconfig//' common/build.config.gki
-          # nama versi kernel
-          sed -i '/^CONFIG_LOCALVERSION=/d' common/arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_LOCALVERSION="-${{ inputs.kernel_name }}"' >> common/arch/arm64/configs/gki_defconfig
           # BBR sebagai default dan WireGuard. Algoritma TCP lain dimatikan
           cat >> common/arch/arm64/configs/gki_defconfig <<'EOF'
           CONFIG_TCP_CONG_ADVANCED=y
