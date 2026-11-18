@@ -82,9 +82,13 @@ jobs:
           CONFIG_TCP_CONG_BBR=y
           CONFIG_DEFAULT_TCP_CONG="bbr"
           CONFIG_NET_SCH_FQ=y
+          # CONFIG_TCP_CONG_BIC is not set
+          # CONFIG_TCP_CONG_WESTWOOD is not set
+          # CONFIG_TCP_CONG_HTCP is not set
           EOF
       - name: Build kernel
         run: |
+          set -o pipefail
           cd ~/gki
           BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh 2>&1 | tail -n 200
           find out -name Image -type f
