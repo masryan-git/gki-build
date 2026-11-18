@@ -8,8 +8,8 @@ on:
         default: "common-android12-5.10-lts"
         required: true
       kernel_name:
-        description: "Nama kernel (untuk nama zip)"
-        default: "MyGKI"
+        description: "masryan-unjukbakat"
+        default: "masryan-unjukbakat"
         required: true
       bbr_wireguard:
         description: "Aktifkan BBR + WireGuard (eksperimental)"
@@ -68,7 +68,12 @@ jobs:
           CONFIG_DEFAULT_TCP_CONG="bbr"
           CONFIG_WIREGUARD=y
           EOF
-
+      - name: masryan-kernel-unjukbakat
+        run: |
+          cd ~/gki
+          sed -i 's/check_defconfig//' common/build.config.gki
+          sed -i '/^CONFIG_LOCALVERSION=/d' common/arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_LOCALVERSION="-${{ inputs.kernel_name }}"' >> common/arch/arm64/configs/gki_defconfig
       - name: Build kernel
         run: |
           cd ~/gki
