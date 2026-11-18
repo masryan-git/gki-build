@@ -71,7 +71,9 @@ jobs:
           # CONFIG_TCP_CONG_WESTWOOD is not set
           # CONFIG_TCP_CONG_HTCP is not set
           EOF
-
+          cd ~/gki/common
+          git add -A
+          git commit -q -m "Custom config"
       - name: Build kernel
         run: |
           set -o pipefail
