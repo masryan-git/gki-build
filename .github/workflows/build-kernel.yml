@@ -74,18 +74,6 @@ jobs:
           sed -i 's/check_defconfig//' common/build.config.gki
           sed -i '/^CONFIG_LOCALVERSION=/d' common/arch/arm64/configs/gki_defconfig
           echo 'CONFIG_LOCALVERSION="-${{ inputs.kernel_name }}"' >> common/arch/arm64/configs/gki_defconfig
-      - name: Tambah config jaringan
-        run: |
-          cd ~/gki
-          cat >> common/arch/arm64/configs/gki_defconfig <<'EOF'
-          CONFIG_TCP_CONG_ADVANCED=y
-          CONFIG_TCP_CONG_BBR=y
-          CONFIG_DEFAULT_TCP_CONG="bbr"
-          CONFIG_NET_SCH_FQ=y
-          # CONFIG_TCP_CONG_BIC is not set
-          # CONFIG_TCP_CONG_WESTWOOD is not set
-          # CONFIG_TCP_CONG_HTCP is not set
-          EOF
       - name: Build kernel
         run: |
           set -o pipefail
